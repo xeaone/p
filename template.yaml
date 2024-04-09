@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  notes
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
+    LoggingConfig:
+      LogFormat: JSON
+
+Resources:
+
+  NotesDatabase:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: user
+          AttributeType: S
+        - AttributeName: note
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user
+          KeyType: HASH
+        - AttributeName: note
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  NotesFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: notes/
+      Handler: index.main
+      Runtime: nodejs20.x
+      Architectures:
+      - x86_64
+      Events:
+        # CreateNote:
+        #   Type: Api
+        #   Properties:
+        #     Path: /note
+        #     Method: post
+        # ReadNote:
+        #   Type: Api
+        #   Properties:
+        #     Path: /note
+        #     Method: get
+        # UpdateNote:
+        #   Type: Api
+        #   Properties:
+        #     Path: /note
+        #     Method: put
+        # DeleteNote:
+        #   Type: Api
+        #   Properties:
+        #     Path: /note
+        #     Method: delete
+        Root:
+          Type: Api
+          Properties:
+            Path: /
+            Method: any
+        Any:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /{any+}
+            Method: any
+
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Bundle: true
+        Minify: false
+        Sourcemap: true
+        Target: "node20"
+        OutExtension:
+          - .js=.mjs
+        EntryPoints:
+          - index.ts
+        Banner:
+        - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);

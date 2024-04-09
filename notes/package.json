@@ -1,0 +1,14 @@
+{
+    "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.549.0",
+        "aws-sdk": "^2.1595.0"
+    },
+    "scripts": {
+        "start-local-dynamo": "java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb",
+        "start-local-lambda": "sam build && sam local start-api"
+    },
+    "devDependencies": {
+        "@types/aws-lambda": "^8.10.137",
+        "@types/node": "^20.12.5"
+    }
+}
