@@ -175,8 +175,8 @@ const clientCss = async () => {
 };
 
 export const main: Handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+    const pathname = event.path.replace(/^\/Stage\/?$/, '/');
     const method = event.httpMethod;
-    const pathname = event.path;
     const user = 'alexelias';
 
     let body;
