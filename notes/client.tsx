@@ -37,7 +37,7 @@ const Root = () => {
     };
 
     const loadNotes = () => fetch(
-        '/notes', { method: 'GET' }
+        './notes', { method: 'GET' }
     ).then(
         r => r.json()
     ).then(
@@ -45,7 +45,7 @@ const Root = () => {
     ).catch(console.error);
 
     const deleteNote = async (note:Note) => {
-        await fetch('/note', { method: 'DELETE', body: JSON.stringify(note) });
+        await fetch('./note', { method: 'DELETE', body: JSON.stringify(note) });
         await loadNotes();
     };
 
@@ -58,7 +58,7 @@ const Root = () => {
         e.preventDefault();
         const form = e.target as HTMLFormElement;
         const data = Object.fromEntries(new FormData(form));
-        await fetch('/note', {
+        await fetch('./note', {
             method: note ? 'PUT' : 'POST',
             body: JSON.stringify(note ? { ...data, note: note.note } : data)
         });
