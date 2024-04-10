@@ -139,7 +139,7 @@ const rootPage = async () => {
         body: /*html*/`
             <html lang="en">
             <head>
-
+                <base href="/Stage/">
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <meta name="color-scheme" content="light dark" />
                 <script type="module" src="./client.js" defer></script>
@@ -175,8 +175,8 @@ const clientCss = async () => {
 };
 
 export const main: Handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    const pathname = event.path.replace(/^\/Stage\/?$/, '/');
     const method = event.httpMethod;
+    const pathname = event.path.replace(/\/Stage\/?/, '/');
     const user = 'alexelias';
 
     let body;
