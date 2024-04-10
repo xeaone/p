@@ -3,6 +3,7 @@
     "name": "notes",
     "version": "1.0.0",
     "dependencies": {
+        "@aws-sdk/client-cognito-identity-provider": "^3.552.0",
         "@aws-sdk/client-dynamodb": "^3.549.0",
         "@aws-sdk/util-dynamodb": "^3.549.0",
         "react": "^18.2.0",

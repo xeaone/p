@@ -1,21 +1,25 @@
-# Note App Aws Cloud
+# Notes App
+AWS Cloud 
 
-- https://g2g4il80hb.execute-api.us-east-1.amazonaws.com/Stage
+### Resources
+
 - https://aws.amazon.com/blogs/database/choosing-the-right-dynamodb-partition-key/
 - https://medium.com/@dimi_2011/developing-and-debugging-lambda-functions-with-dynamodb-locally-e8e1ee35fbb6
 
 ### Deploy
 
+- https://g2g4il80hb.execute-api.us-east-1.amazonaws.com/Stage
+
 ```bash
-sam build && sam deploy --guided
+sh deploy.sh
 ```
 
-### Run Locally
+### Watch
+
+- http://localhost:3000/Stage/
 
 ```bash
-# need for first time if not started on system
-sudo service docker start
-sam build && sam local start-api
+sh watch.sh
 ```
 
 ### Delete

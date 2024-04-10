@@ -1,3 +1,3 @@
 
-sam build
+sh build.sh
 sam deploy

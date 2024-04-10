@@ -2,50 +2,29 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Note } from './types';
 
-const Modal = ({ note, open, submitModal, closeModal }) => (
-<dialog open={open}>
-    <article>
-        <header>
-            <button aria-label="Close" rel="prev" onClick={closeModal}></button>
-            <h3>{note ? 'Update' : 'Create'} Note</h3>
-        </header>
-        <form onSubmit={(e)=>submitModal(e,note)}>
-            <label>
-                <span>Title</span>
-                <input type="text" name="title" placeholder="Title" aria-label="Title" defaultValue={note?.title??''} required/>
-            </label>
-            <label>
-                <span>Content</span>
-                <textarea name="content" placeholder="Content" aria-label="Content" defaultValue={note?.content??''} required></textarea>
-            </label>
-            <button type="submit" className="outline">{note ? 'Update' : 'Create'}</button>
-        </form>
-        <footer></footer>
-    </article>
-</dialog>
-);
-
 const Root = () => {
     const [ notes, setNotes ] = useState<Note[]>([]);
-    const [ note, setNote ] = useState<Note|null>(null);
+    const [ note, setNote ] = useState<Note>();
     const [ open, setOpen ] = useState(false);
 
     const openModal =  () => setOpen(true);
     const closeModal = () => {
         setOpen(false);
-        setNote(null);
+        setNote(undefined);
     };
 
-    const loadNotes = () => fetch(
-        './notes', { method: 'GET' }
-    ).then(
-        r => r.json()
-    ).then(
-        d => setNotes(d)
-    ).catch(console.error);
+    const loadNotes = async () => {
+        const r = await fetch('./api/note', { method: 'GET' });
+        if (r.status === 200) {
+            setNotes(await r.json());
+        } else {
+            console.error(r);
+            console.error(await r.text());
+        }
+    };
 
     const deleteNote = async (note:Note) => {
-        await fetch('./note', { method: 'DELETE', body: JSON.stringify(note) });
+        await fetch('./api/note', { method: 'DELETE', body: JSON.stringify(note) });
         await loadNotes();
     };
 
@@ -58,7 +37,7 @@ const Root = () => {
         e.preventDefault();
         const form = e.target as HTMLFormElement;
         const data = Object.fromEntries(new FormData(form));
-        await fetch('./note', {
+        await fetch('./api/note', {
             method: note ? 'PUT' : 'POST',
             body: JSON.stringify(note ? { ...data, note: note.note } : data)
         });
@@ -73,7 +52,26 @@ const Root = () => {
 
     return (<>
 
-        <Modal {...{ note, open, closeModal, submitModal }} />
+        <dialog open={open}>
+            <article>
+                <header>
+                    <button aria-label="Close" rel="prev" onClick={closeModal}></button>
+                    <h3>{note ? 'Update' : 'Create'} Note</h3>
+                </header>
+                <form onSubmit={(e) => submitModal(e, note)}>
+                    <label>
+                        <span>Title</span>
+                        <input type="text" name="title" placeholder="Title" aria-label="Title" defaultValue={note?.title??''} required/>
+                    </label>
+                    <label>
+                        <span>Content</span>
+                        <textarea name="content" placeholder="Content" aria-label="Content" defaultValue={note?.content??''} required></textarea>
+                    </label>
+                    <button type="submit" className="outline">{note ? 'Update' : 'Create'}</button>
+                </form>
+                <footer></footer>
+            </article>
+        </dialog>
 
         <nav>
             <ul>

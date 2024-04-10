@@ -1,22 +1,61 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  notes
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 3
-
-    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
     LoggingConfig:
       LogFormat: JSON
 
+Parameters:
+  MyAppName:
+    Default: notes
+    Type: String
+  MyStageName:
+    Default: Pro
+    Type: String
+
 Resources:
 
-  NotesDatabase:
+  Api:
+    # DependsOn: UserPool
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Ref MyAppName
+      StageName: !Ref MyStageName
+      Auth:
+        Authorizers:
+            CognitoAuthorizer:
+              UserPoolArn: !GetAtt UserPool.Arn
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Ref MyAppName
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+      UsernameAttributes:
+        - email
+      Schema:
+        - AttributeDataType: String
+          Name: email
+          Required: false
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Ref MyAppName
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  Database:
     Type: AWS::DynamoDB::Table
     Properties:
+      TableName: !Ref MyAppName
       AttributeDefinitions:
         - AttributeName: user
           AttributeType: S
@@ -31,45 +70,34 @@ Resources:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
-  NotesFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  Function:
+    Type: AWS::Serverless::Function
     Properties:
+      FunctionName: !Ref MyAppName
       CodeUri: notes/
       Handler: server.main
       Runtime: nodejs20.x
-      Architectures:
-      - x86_64
       Events:
-        # CreateNote:
-        #   Type: Api
-        #   Properties:
-        #     Path: /note
-        #     Method: post
-        # ReadNote:
-        #   Type: Api
-        #   Properties:
-        #     Path: /note
-        #     Method: get
-        # UpdateNote:
-        #   Type: Api
-        #   Properties:
-        #     Path: /note
-        #     Method: put
-        # DeleteNote:
-        #   Type: Api
-        #   Properties:
-        #     Path: /note
-        #     Method: delete
+        Api:
+          Type: Api
+          Properties:
+            Path: /api/{any+}
+            Method: any
+            RestApiId: !Ref Api
+            Auth:
+              Authorizer: CognitoAuthorizer
         Root:
           Type: Api
           Properties:
             Path: /
             Method: any
+            RestApiId: !Ref Api
         Any:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: Api
           Properties:
             Path: /{any+}
             Method: any
+            RestApiId: !Ref Api
 
     # Metadata:
     #   BuildMethod: esbuild
@@ -85,3 +113,14 @@ Resources:
     #       - server.ts
     #     Banner:
     #       - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+Outputs:
+  Api:
+    Description: "URL of the API Gateway"
+    Value: !Sub "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${MyStageName}/"
+  UserPool:
+    Description: "ID of the Cognito User Pool"
+    Value: !Ref UserPool
+  UserPoolClient:
+    Description: "ID of the Cognito User Pool Client"
+    Value: !Ref UserPoolClient
