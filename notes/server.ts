@@ -1,20 +1,39 @@
 import { DeleteItemCommand, DynamoDBClient, PutItemCommand, QueryCommand, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Handler } from 'aws-lambda';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
+import { User, Note } from './types';
 
-type User = string;
-interface Note {
-    // user: string,
-    note: string,
-    content: string,
-    created: number,
-    updated: number,
-}
+import path from 'path';
+import fs from 'fs';
 
 const TableName = 'notes-NotesDatabase-1BJHU2YMGWU32';
 const DynamoClient = new DynamoDBClient({ region: 'us-east-1' });
 
+const noteQuery = async (user: User): Promise<Note[]> => {
+
+    const result = await DynamoClient.send(new QueryCommand({
+        TableName,
+        ExpressionAttributeValues: {
+            ':u': { S: user }
+        },
+        ExpressionAttributeNames: {
+            '#u': 'user',
+        },
+        KeyConditionExpression:'#u = :u',
+    }));
+
+    if (result.Items) {
+        return result.Items.map(i => unmarshall(i) as Note)
+    } else {
+        return [];
+    }
+};
+
 const createNote = async (user: User, data: Note): Promise<APIGatewayProxyResult> => {
+
+    if (typeof data.title !== 'string') {
+        return { statusCode: 400, body: JSON.stringify({ message: 'note title not valid' }) };
+    }
 
     if (typeof data.content !== 'string') {
         return { statusCode: 400, body: JSON.stringify({ message: 'note content not valid' }) };
@@ -26,6 +45,7 @@ const createNote = async (user: User, data: Note): Promise<APIGatewayProxyResult
             Item: {
                 user: { S: user },
                 note: { S: crypto.randomUUID() },
+                title: { S: data.title },
                 content: { S: data.content },
                 created: { N: `${Date.now()}` },
                 updated: { N: `${Date.now()}` },
@@ -40,22 +60,9 @@ const createNote = async (user: User, data: Note): Promise<APIGatewayProxyResult
 
 const readNotes = async (user: User): Promise<APIGatewayProxyResult> => {
 
-    const items: Note[] = [];
+    let items: Note[];
     try {
-        const result = await DynamoClient.send(new QueryCommand({
-            TableName,
-            ExpressionAttributeValues: {
-                ':u': { S: user }
-            },
-            ExpressionAttributeNames: {
-                '#u': 'user',
-            },
-            KeyConditionExpression:'#u = :u',
-        }));
-
-        if (result.Items) {
-            items.push(...result.Items.map(i => unmarshall(i) as Note));
-        }
+        items = await noteQuery(user);
     } catch (error) {
         return { statusCode: 500, body: JSON.stringify(error) };
     }
@@ -69,8 +76,12 @@ const updateNote = async (user: User, data: Note): Promise<APIGatewayProxyResult
         return { statusCode: 400, body: JSON.stringify({ message: 'note id required' }) };
     }
 
+    if (typeof data.title !== 'string') {
+        return { statusCode: 400, body: JSON.stringify({ message: 'note title not valid' }) };
+    }
+
     if (typeof data.content !== 'string') {
-        return { statusCode: 400, body: JSON.stringify({ message: 'note type not valid' }) };
+        return { statusCode: 400, body: JSON.stringify({ message: 'note content not valid' }) };
     }
 
     try {
@@ -82,15 +93,17 @@ const updateNote = async (user: User, data: Note): Promise<APIGatewayProxyResult
             },
             ExpressionAttributeValues: {
                 ':updated': { N: `${Date.now()}` },
+                ':title': { S: data.title },
                 ':content': { S: data.content },
             },
             ExpressionAttributeNames: {
                 '#u': 'user',
                 '#n': 'note',
-                '#updated': 'updated',
+                '#title': 'title',
                 '#content': 'content',
+                '#updated': 'updated',
             },
-            UpdateExpression: 'SET #updated = :updated, #content = :content',
+            UpdateExpression: 'SET #title = :title, #content = :content, #updated = :updated',
             ConditionExpression: 'attribute_exists(#u) AND attribute_exists(#n)',
         }));
     } catch (error) {
@@ -119,9 +132,50 @@ const deleteNote = async (user: User, data: Note): Promise<APIGatewayProxyResult
     return { statusCode: 200, body: JSON.stringify({ message: 'note deleted' }) };
 };
 
+const rootPage = async () => {
+    return {
+        statusCode: 200,
+        headers: { 'content-type': 'text/html' },
+        body: /*html*/`
+            <html lang="en">
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <meta name="color-scheme" content="light dark" />
+                <script type="module" src="/client.js" defer></script>
+                <link rel="stylesheet" href="/client.css" />
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css" />
+                <title>Notes</title>
+            </head>
+            <body>
+                <main class="container"></main>
+            </body>
+        </html>
+    `
+    };
+};
+
+const clientJs = async () => {
+    try {
+        const body = await fs.promises.readFile(path.resolve('./client.js'), { encoding: 'utf8' });
+        return { statusCode: 200, headers: { 'content-type': 'text/javascript' }, body };
+    } catch (error) {
+        return { statusCode: 500, body: JSON.stringify(error) };
+    }
+};
+
+const clientCss = async () => {
+    try {
+        const body = await fs.promises.readFile(path.resolve('./client.css'), { encoding: 'utf8' });
+        return { statusCode: 200, headers: { 'content-type': 'text/css' }, body };
+    } catch (error) {
+        return { statusCode: 500, body: JSON.stringify(error) };
+    }
+};
+
 export const main: Handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     const method = event.httpMethod;
-    const path = event.path;
+    const pathname = event.path;
     const user = 'alexelias';
 
     let body;
@@ -131,13 +185,19 @@ export const main: Handler = async (event: APIGatewayProxyEvent): Promise<APIGat
         return { statusCode: 400, body: JSON.stringify({ message: 'body not valid' }) };
     }
 
-    if (method === 'POST' && path === '/note') {
+    if (method === 'GET' && pathname === '/') {
+        return rootPage();
+    } else if (method === 'GET' && pathname === '/client.js') {
+        return clientJs();
+    } else if (method === 'GET' && pathname === '/client.css') {
+        return clientCss();
+    } else if (method === 'POST' && pathname === '/note') {
         return createNote(user, body);
-    } else if (method === 'GET' && path === '/notes') {
+    } else if (method === 'GET' && pathname === '/notes') {
         return readNotes(user);
-    } else if (method === 'PUT' && path === '/note') {
+    } else if (method === 'PUT' && pathname === '/note') {
         return updateNote(user, body);
-    } else if (method === 'DELETE' && path === '/note') {
+    } else if (method === 'DELETE' && pathname === '/note') {
         return deleteNote(user, body);
     } else {
         return { statusCode: 404, body: JSON.stringify({ message: 'Not Found' }) };

@@ -1,0 +1,34 @@
+details {
+    border-radius: 2px;
+    border: 1px solid var(--pico-muted-border-color);
+}
+
+details>summary {
+    flex: 1 1;
+    display: flex;
+    padding: 1rem;
+}
+
+details>summary>strong {
+    flex: 1 1;
+    display: flex;
+}
+
+details>article {
+    margin: 1rem;
+}
+
+button {
+    padding: 0.5rem !important;
+    margin: 0.25rem !important;
+}
+
+.delete {
+    --pico-color: var(--pico-color-fuchsia-500) !important;
+    --pico-border-color: var(--pico-color-fuchsia-500) !important;
+}
+
+.edit {
+    --pico-color: var(--pico-color-jade-500) !important;
+    --pico-border-color: var(--pico-color-jade-500) !important;
+}
