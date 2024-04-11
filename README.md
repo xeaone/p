@@ -10,6 +10,7 @@ Cookies and validated on in the `notes/validation.ts` using
 [aws-jwt-verify](https://github.com/awslabs/aws-jwt-verify).
 
 - No cache optimizations.
+- Does not handle Incorrect username or password.
 - Sign up requires an email address and password of 6 characters or more.
 
 ### Architecture
