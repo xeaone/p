@@ -1,8 +1,6 @@
 
-export type User = string;
-
 export interface Note {
-    // user: string,
+    user: string,
     note: string,
     title: string,
     content: string,

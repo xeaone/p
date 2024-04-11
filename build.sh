@@ -1,6 +1,7 @@
 npx esbuild \
     notes/server.ts \
     --bundle \
+    --minify \
     --format=esm \
     --platform=node \
     --target=es2020 \
@@ -11,6 +12,7 @@ npx esbuild \
 npx esbuild \
     notes/client.tsx \
     --bundle \
+    --minify \
     --format=esm \
     --platform=browser \
     --target=es2022 \
@@ -18,4 +20,5 @@ npx esbuild \
     --outfile=notes/client.js
 
 sam validate
+
 sam build

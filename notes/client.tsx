@@ -2,6 +2,98 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Note } from './types';
 
+const NotFound = () => <h1>Not Found</h1>;
+
+const SignIn = () => {
+    const submit = async (e) => {
+        e.preventDefault();
+
+        const form = e.target as HTMLFormElement;
+        const data = Object.fromEntries(new FormData(form));
+        const result = await fetch('./api/sign-in', { method: 'POST', body: JSON.stringify(data) });
+
+        if (result.status === 200) {
+            form.reset();
+            window.location.assign('./');
+        } else {
+            alert(`Error: ${result.status} - ${await result.text()}`);
+        }
+    };
+
+    return <>
+         <nav>
+            <ul>
+                <li>
+                    <h1>Sign In</h1>
+                </li>
+            </ul>
+            <ul>
+                <li>
+                    <a href="./sign-up" role="button">Sign In</a>
+                </li>
+            </ul>
+        </nav>
+        <form onSubmit={submit}>
+            <label>
+                <span>Email</span>
+                <input type="email" name="email" placeholder="Email" aria-label="email" required />
+            </label>
+            <label>
+                <span>Password</span>
+                <input type="password" name="password" placeholder="Password" aria-label="password" required />
+            </label>
+            <button type="submit" className="outline">Sign In</button>
+        </form>
+    </>;
+}
+
+const SignUp = () => {
+
+    const submit = async (e) => {
+        e.preventDefault();
+
+        const form = e.target as HTMLFormElement;
+        const data = Object.fromEntries(new FormData(form));
+        const result = await fetch('./api/sign-up', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+
+        if (result.status === 200) {
+            form.reset();
+            window.location.assign('./sign-in');
+        } else {
+            alert(`Error: ${result.status} - ${await result.text()}`);
+        }
+    };
+
+    return <>
+         <nav>
+            <ul>
+                <li>
+                    <h1>Sign Up</h1>
+                </li>
+            </ul>
+            <ul>
+                <li>
+                    <a href="./sign-in" role="button">Sign In</a>
+                </li>
+            </ul>
+        </nav>
+        <form onSubmit={submit}>
+            <label>
+                <span>Email</span>
+                <input type="email" name="email" placeholder="Email" aria-label="email" required />
+            </label>
+            <label>
+                <span>Password</span>
+                <input type="password" name="password" placeholder="Password" aria-label="password" required />
+            </label>
+            <button type="submit" className="outline">Sign Up</button>
+        </form>
+    </>;
+}
+
 const Root = () => {
     const [ notes, setNotes ] = useState<Note[]>([]);
     const [ note, setNote ] = useState<Note>();
@@ -14,12 +106,14 @@ const Root = () => {
     };
 
     const loadNotes = async () => {
-        const r = await fetch('./api/note', { method: 'GET' });
-        if (r.status === 200) {
-            setNotes(await r.json());
+        const result = await fetch('./api/note', { method: 'GET' });
+        if (result.status === 200) {
+            setNotes(await result.json());
+        } else if (result.status === 401) {
+            window.location.assign('./sign-up');
         } else {
-            console.error(r);
-            console.error(await r.text());
+            console.error(result);
+            console.error(await result.text());
         }
     };
 
@@ -37,10 +131,11 @@ const Root = () => {
         e.preventDefault();
         const form = e.target as HTMLFormElement;
         const data = Object.fromEntries(new FormData(form));
-        await fetch('./api/note', {
-            method: note ? 'PUT' : 'POST',
-            body: JSON.stringify(note ? { ...data, note: note.note } : data)
-        });
+        const method = note ? 'PUT' : 'POST';
+        const body = JSON.stringify(note ? { ...data, note: note.note } : data);
+
+        await fetch('./api/note', { method, body });
+
         form.reset();
         closeModal();
         loadNotes();
@@ -50,7 +145,7 @@ const Root = () => {
         loadNotes();
     }, []);
 
-    return (<>
+    return <>
 
         <dialog open={open}>
             <article>
@@ -102,7 +197,16 @@ const Root = () => {
         </details>
         )}
 
-    </>);
+    </>;
 };
 
-createRoot(document.querySelector('main') as HTMLElement).render(<Root/>);
+const path = window.location.pathname.replace(/\/(Stage|Pro)\/?/, '/');
+const root = document.querySelector('main') as HTMLElement;
+
+const page =
+    path === '/' ? <Root /> :
+        path === '/sign-up' ? < SignUp /> :
+            path === '/sign-in' ? <SignIn /> :
+                <NotFound />;
+
+createRoot(root).render(page);

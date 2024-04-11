@@ -1,23 +1,20 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Handler } from 'aws-lambda';
-
 import noteDelete from './routes/note-delete';
 import noteCreate from './routes/note-create';
 import noteUpdate from './routes/note-update';
 import noteRead from './routes/note-read';
 import signUp from './routes/sign-up';
-
+import signIn from './routes/sign-in';
 import validate from './validate';
-
 import path from 'path';
 import fs from 'fs';
-import signIn from './routes/sign-in';
 
 const rootPage = async () => {
     return {
         statusCode: 200,
         headers: { 'content-type': 'text/html' },
         body: /*html*/`
-            <html lang="en">
+        <html lang="en">
             <head>
                 <base href="/Stage/">
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -32,7 +29,7 @@ const rootPage = async () => {
                 <main class="container"></main>
             </body>
         </html>
-    `
+        `,
     };
 };
 
@@ -59,7 +56,6 @@ const clientCss = async () => {
 export const main: Handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     const method = event.httpMethod;
     const pathname = event.path.replace(/\/(Stage|Pro)\/?/, '/');
-    const user = 'alexelias';
 
     let body;
     try {
@@ -68,12 +64,11 @@ export const main: Handler = async (event: APIGatewayProxyEvent): Promise<APIGat
         return { statusCode: 400, body: JSON.stringify({ message: 'body not valid' }) };
     }
 
-    if (pathname === '/event' || pathname === '/api/event') {
-        return { statusCode: 200, body: JSON.stringify(event) };
-    }
-
     try {
-        if (method === 'GET' && pathname === '/') {
+        if (
+            method === 'GET' &&
+            pathname === '/' || pathname === '/sign-up' || pathname === '/sign-in'
+        ) {
             return rootPage();
         } else if (method === 'GET' && pathname === '/client.js') {
             return clientJs();
@@ -87,18 +82,18 @@ export const main: Handler = async (event: APIGatewayProxyEvent): Promise<APIGat
             const credential = await validate(event);
             if (credential) {
                 if (method === 'POST' && pathname === '/api/note') {
-                    return noteCreate(user, body);
+                    return noteCreate(body, credential);
                 } else if (method === 'GET' && pathname === '/api/note') {
-                    return noteRead(user);
+                    return noteRead(body, credential);
                 } else if (method === 'PUT' && pathname === '/api/note') {
-                    return noteUpdate(user, body);
+                    return noteUpdate(body, credential);
                 } else if (method === 'DELETE' && pathname === '/api/note') {
-                    return noteDelete(user, body);
+                    return noteDelete(body, credential);
                 } else {
                     return { statusCode: 404, body: JSON.stringify({ message: 'Not Found' }) };
                 }
             } else {
-                return { statusCode: 403, body: JSON.stringify({ message: 'Forbidden' }) };
+                return { statusCode: 401, body: JSON.stringify({ message: 'Unauthorized' }) };
             }
         }
     } catch (error) {

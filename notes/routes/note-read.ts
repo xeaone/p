@@ -1,17 +1,19 @@
 import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb';
-import { APIGatewayProxyResult } from 'aws-lambda';
+import { CognitoIdTokenPayload } from 'aws-jwt-verify/jwt-model';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
-import { User, Note } from '../types';
+import { APIGatewayProxyResult } from 'aws-lambda';
+import { TableName } from '../variables';
+import { Note } from '../types';
 
-export default async (user: User): Promise<APIGatewayProxyResult> => {
+export default async (data: Note, user: CognitoIdTokenPayload): Promise<APIGatewayProxyResult> => {
 
     let items: Note[] = [];
     try {
         const DynamoClient = new DynamoDBClient({ region: 'us-east-1' });
         const result = await DynamoClient.send(new QueryCommand({
-            TableName: 'notes',
+            TableName,
             ExpressionAttributeValues: {
-                ':u': { S: user }
+                ':u': { S: user.sub }
             },
             ExpressionAttributeNames: {
                 '#u': 'user',

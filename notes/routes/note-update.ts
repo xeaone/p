@@ -1,8 +1,10 @@
 import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
+import { CognitoIdTokenPayload } from 'aws-jwt-verify/jwt-model';
 import { APIGatewayProxyResult } from 'aws-lambda';
-import { User, Note } from '../types';
+import { TableName } from '../variables';
+import { Note } from '../types';
 
-export default async (user: User, data: Note): Promise<APIGatewayProxyResult> => {
+export default async (data: Note, user: CognitoIdTokenPayload): Promise<APIGatewayProxyResult> => {
 
     if (!data.note) {
         return { statusCode: 400, body: JSON.stringify({ message: 'note id required' }) };
@@ -19,9 +21,9 @@ export default async (user: User, data: Note): Promise<APIGatewayProxyResult> =>
     try {
         const DynamoClient = new DynamoDBClient({ region: 'us-east-1' });
         await DynamoClient.send(new UpdateItemCommand({
-            TableName: 'notes',
+            TableName,
             Key: {
-                user: { S: user },
+                user: { S: user.sub },
                 note: { S: data.note },
             },
             ExpressionAttributeValues: {

@@ -8,6 +8,9 @@ Globals:
       LogFormat: JSON
 
 Parameters:
+  MyRegion:
+    Default: us-east-1
+    Type: String
   MyAppName:
     Default: notes
     Type: String
@@ -18,7 +21,6 @@ Parameters:
 Resources:
 
   Api:
-    # DependsOn: UserPool
     Type: AWS::Serverless::Api
     Properties:
       Name: !Ref MyAppName
@@ -34,13 +36,17 @@ Resources:
       UserPoolName: !Ref MyAppName
       Policies:
         PasswordPolicy:
-          MinimumLength: 8
+          MinimumLength: 6
+      AutoVerifiedAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: false
       UsernameAttributes:
         - email
       Schema:
         - AttributeDataType: String
           Name: email
-          Required: false
+          Required: true
 
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -77,15 +83,39 @@ Resources:
       CodeUri: notes/
       Handler: server.main
       Runtime: nodejs20.x
+      Environment:
+        Variables:
+          region: !Ref MyRegion
+          TableName: !Ref MyAppName
+          UserPoolId: !Ref UserPool
+          ClientId: !Ref UserPoolClient
+      Policies:
+        - Statement:
+          - Sid: NoteUserPoolPolicy
+            Effect: Allow
+            Action:
+              - cognito-idp:SignUp
+              - cognito-idp:InitiateAuth
+              - cognito-idp:AdminConfirmSignUp
+            Resource: '*'
+        - Statement:
+          - Sid: NoteDatabasePolicy
+            Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:DeleteItem
+              - dynamodb:PutItem
+              - dynamodb:Query
+            Resource: '*'
       Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /api/{any+}
-            Method: any
-            RestApiId: !Ref Api
-            Auth:
-              Authorizer: CognitoAuthorizer
+        # Api:
+        #   Type: Api
+        #   Properties:
+        #     Path: /api/{any+}
+        #     Method: any
+        #     RestApiId: !Ref Api
+        #     Auth:
+        #       Authorizer: CognitoAuthorizer
         Root:
           Type: Api
           Properties:
@@ -98,21 +128,6 @@ Resources:
             Path: /{any+}
             Method: any
             RestApiId: !Ref Api
-
-    # Metadata:
-    #   BuildMethod: esbuild
-    #   BuildProperties:
-    #     Format: esm
-    #     Bundle: true
-    #     Minify: false
-    #     Sourcemap: true
-    #     Target: "es2022"
-    #     OutExtension:
-    #       - .js=.mjs
-    #     EntryPoints:
-    #       - server.ts
-    #     Banner:
-    #       - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
 Outputs:
   Api:

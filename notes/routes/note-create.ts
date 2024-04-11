@@ -1,8 +1,10 @@
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { APIGatewayProxyResult } from 'aws-lambda';
-import { User, Note } from '../types';
+import { Note } from '../types';
+import { region, TableName } from '../variables';
+import { CognitoIdTokenPayload } from 'aws-jwt-verify/jwt-model';
 
-export default async (user: User, data: Note): Promise<APIGatewayProxyResult> => {
+export default async (data: Note, user: CognitoIdTokenPayload): Promise<APIGatewayProxyResult> => {
 
     if (typeof data.title !== 'string') {
         return { statusCode: 400, body: JSON.stringify({ message: 'note title not valid' }) };
@@ -13,12 +15,11 @@ export default async (user: User, data: Note): Promise<APIGatewayProxyResult> =>
     }
 
     try {
-        const TableName = 'notes';
-        const DynamoClient = new DynamoDBClient({ region: 'us-east-1' });
+        const DynamoClient = new DynamoDBClient({ region });
         await DynamoClient.send(new PutItemCommand({
             TableName,
             Item: {
-                user: { S: user },
+                user: { S: user.sub },
                 note: { S: crypto.randomUUID() },
                 title: { S: data.title },
                 content: { S: data.content },
